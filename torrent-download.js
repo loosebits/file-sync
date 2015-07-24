@@ -9,6 +9,7 @@ var auth = {
   user: config.get('transmission.user'),
   password: config.get('transmission.password')
 };
+var session;
 var Downloader = function() {
   var self = this;
   this.start = function() {
@@ -17,13 +18,12 @@ var Downloader = function() {
       auth: auth
     }).then(function(args) {
 
-      var session = args[0].headers['x-transmission-session-id'];
+      session = args[0].headers['x-transmission-session-id'];
       if (session) {
         self.emit('authenticated');
       } else {
         self.emit('error', {step: 'authenticating'});
       }
-      console.log(args[0].headers['x-transmission-session-id']);
       return request(config.get('transmission.rpcUrl'), {
         body: {
           method: 'torrent-get',
@@ -41,11 +41,15 @@ var Downloader = function() {
     }).then(function(args) {
       var res = args[1];
       self.emit('torrentsListed', res.arguments.torrents);
+      if (!res.arguments.torrents.length) {
+        self.emit('finished', []);
+      }
       return _.filter(res.arguments.torrents, function(t) {
         return t.isFinished;
       });
     }).then(function(torrents) {
-      var downloadTorrents = function(torrents, index) {
+      var deferred = Q.defer();
+      var downloadTorrents = function(data, index) {
         index = index || 0;
         self.emit('startingDownload', torrents[index].name);
         new Rsync().flags('azvP')
@@ -54,12 +58,14 @@ var Downloader = function() {
         .execute(function(err, code, cmd) {
           if (err) {
             self.emit('error', {step: 'download', error: err});
+            deferred.reject(err);
           } else if (index != torrents.length - 1) {
             self.emit('downloadComplete', torrents[index].name);
-            downloadTorrents(torrents, index + 1);
+            downloadTorrents(data, index + 1);
           } else {
             self.emit('downloadComplete', torrents[index].name);
             self.emit('finished', torrents);
+            deferred.resolve(torrents);
           }
         }, function(data) {
           self.emit('rsyncOutput', {name: torrents[index].name, output: data.toString()});
@@ -68,6 +74,24 @@ var Downloader = function() {
         });
       };
       downloadTorrents(torrents);
+      return deferred.promise;
+    }).then(function(torrents) {
+      return request(config.get('transmission.rpcUrl'), {
+        auth: auth,
+        json: true,
+        method: 'post',
+        headers: {
+          'x-transmission-session-id': session
+        },
+        body: {
+          method : "torrent-remove",
+          arguments: {
+            ids : _.map(torrents, function(t) { return t.id; }),
+            "delete-local-data" : true
+          }
+        }
+      });
+      
     });
   };
 };
