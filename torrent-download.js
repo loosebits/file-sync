@@ -42,13 +42,14 @@ Downloader.prototype.start = function() {
     });
   }).then(function(args) {
     var res = args[1];
-    self.emit('torrentsListed', res.arguments.torrents);
-    if (!res.arguments.torrents.length) {
-      self.emit('finished', []);
-    }
-    return _.filter(res.arguments.torrents, function(t) {
+    var torrents = _.filter(res.arguments.torrents, function(t) {
       return t.isFinished;
     });
+    self.emit('torrentsListed', torrents);
+    if (!torrents.length) {
+      self.emit('finished', []);
+    }
+    return torrents;
   }).then(function(torrents) {
     var deferred = Q.defer();
     var downloadTorrents = function(data, index) {
