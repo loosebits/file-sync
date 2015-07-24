@@ -1,0 +1,13 @@
+{
+  "ssh": {
+    "user": "username",
+    "host": "some.host.com"
+    "path": "pathToTorrents"
+  },
+  "transmission": {
+    "rpcUrl": "http://some.host.com:41416/transmission/rpc",
+    "user": "username",
+    "password": "password"
+  },
+  "destination": "/Movies/"
+}
