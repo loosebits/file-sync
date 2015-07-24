@@ -1,11 +1,12 @@
+'use strict';
 var express = require('express');
 var app = express();
 var expressWs = require('express-ws')(app);
 var Downloader = require('./torrent-download');
 var _ = require('lodash');
+var config = require('config');
 
 app.use(express.static('public'));
-
 
 var running;
 app.ws('/', function(ws) {
@@ -16,7 +17,7 @@ app.ws('/', function(ws) {
       sendToClients('Authenticating');
     });
     downloader.on('error', function(error) {
-      sendToClients('Failed: ' + error.step);
+      sendToClients('Failed: ' + error.step + ' ' + error.error);
     });
     downloader.on('torrentsListed', function(torrents) {
       sendToClients(_.map(torrents, function(torrent) {
@@ -51,4 +52,6 @@ var sendToClients = function(message) {
 };
 
 
-app.listen(3000);
+app.listen(config.get('serverPort'), function(err) {
+  console.log('Torrent Web started on port ' + config.get('serverPort'));
+});

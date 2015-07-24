@@ -1,7 +1,7 @@
 {
   "ssh": {
     "user": "username",
-    "host": "some.host.com"
+    "host": "some.host.com",
     "path": "pathToTorrents"
   },
   "transmission": {
@@ -9,5 +9,6 @@
     "user": "username",
     "password": "password"
   },
-  "destination": "/Movies/"
+  "destination": "/Movies/",
+  "serverPort": 8080
 }

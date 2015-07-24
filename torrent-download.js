@@ -1,3 +1,4 @@
+'use strict';
 var Q = require('q');
 var _ = require('lodash');
 var Rsync = require('rsync');
@@ -9,7 +10,6 @@ var auth = {
   user: config.get('transmission.user'),
   password: config.get('transmission.password')
 };
-var session;
 var Downloader = function() {
 };
 require('util').inherits(Downloader, EventEmitter);
@@ -61,7 +61,7 @@ Downloader.prototype.start = function() {
         if (err) {
           self.emit('error', {step: 'download', error: err});
           deferred.reject(err);
-        } else if (index != torrents.length - 1) {
+        } else if (index !== torrents.length - 1) {
           self.emit('downloadComplete', torrents[index].name);
           downloadTorrents(data, index + 1);
         } else {
