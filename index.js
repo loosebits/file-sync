@@ -17,9 +17,6 @@ app.ws('/', function(ws) {
     downloader.on('authenticating', function() {
       sendToClients('Authenticating');
     });
-    downloader.on('error', function(error) {
-      sendToClients('Failed: ' + error.step + ' ' + error.error);
-    });
     downloader.on('torrentsListed', function(torrents) {
       sendToClients(_.map(torrents, function(torrent) {
         return torrent.name;
@@ -35,10 +32,17 @@ app.ws('/', function(ws) {
     downloader.on('rsyncOutput', function(data) {
       sendToClients(data.name + ' ' + data.output);
     });
+    downloader.on('torrentsRemoved', function(data) {
+      sendToClients('Torrents removed');
+    });
     downloader.on('finished', function(torrents) {
       sendToClients('Finished!<br />' + _.map(torrents, function(torrent) {
         return torrent.name;
       }).join('<br />'));
+      running = false;
+    });
+    downloader.on('error', function(error) {
+      sendToClients('Failed: ' + error.step + ' ' + error.error);
       running = false;
     });
     downloader.start();

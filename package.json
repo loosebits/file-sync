@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "config": "^1.14.0",
+    "denodeify": "^1.2.1",
     "express": "^4.13.1",
     "express-ws": "^0.2.6",
     "lodash": "^3.10.0",

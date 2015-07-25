@@ -4,8 +4,34 @@ var _ = require('lodash');
 var Rsync = require('rsync');
 var config = require('config');
 var EventEmitter = require('events').EventEmitter;
+var denodeify = require('denodeify');
 
-var request = Q.denodeify(require('request'));
+var authRequest = denodeify(require('request'), function(err, response, body) {
+  if (err) {
+    console.log('failed');
+    return [err, response];
+  } else if (response.statusCode !== 409 || !response.headers['x-transmission-session-id']) {
+    console.log('failed1');
+    return [new Error('Authentication failed', response), response];
+  } else {
+    return [err, response.headers['x-transmission-session-id']];
+  }
+});
+var apiRequest = denodeify(require('request'), function(err, response, body) {
+  if (err) {
+    console.log('failed3');
+    return [err, response];
+  }
+  if (response.statusCode < 200 || response.statusCode > 399) {
+    console.log('failed4');
+    return [new Error('Request failed with ' + response.statusCode, response), response];
+  }
+  if (body.result !== 'success') {
+    console.log('failed5');
+    return [new Error('Request failed with a transmission error', response), response];
+  }
+  return [err, body.arguments];
+});
 var auth = {
   user: config.get('transmission.user'),
   password: config.get('transmission.password')
@@ -13,20 +39,19 @@ var auth = {
 var Downloader = function() {
 };
 require('util').inherits(Downloader, EventEmitter);
+
 Downloader.prototype.start = function() {
   var self = this;
+  var errorHandler = function(step, err) {
+    self.emit('error', {step: step, error: err});
+  };
   self.emit('authenticating');
-  request(config.get('transmission.rpcUrl'), {
+  authRequest(config.get('transmission.rpcUrl'), {
     auth: auth
-  }).then(function(args) {
-
-    self.session = args[0].headers['x-transmission-session-id'];
-    if (self.session) {
-      self.emit('authenticated');
-    } else {
-      self.emit('error', {step: 'authenticating'});
-    }
-    return request(config.get('transmission.rpcUrl'), {
+  }).then(function(session) {
+    self.session = session;
+    self.emit('authenticated');
+    return apiRequest(config.get('transmission.rpcUrl'), {
       body: {
         method: 'torrent-get',
         arguments: {
@@ -40,17 +65,16 @@ Downloader.prototype.start = function() {
         'x-transmission-session-id': self.session
       }
     });
-  }).then(function(args) {
-    var res = args[1];
-    var torrents = _.filter(res.arguments.torrents, function(t) {
+  }, _.curry(errorHandler, 'authenticating')).then(function(args) {
+    var torrents = _.filter(args.torrents, function(t) {
       return t.isFinished;
     });
     self.emit('torrentsListed', torrents);
     if (!torrents.length) {
-      self.emit('finished', []);
+      self.emit('finished');
     }
     return torrents;
-  }).then(function(torrents) {
+  }, _.curry(errorHandler, 'listingTorrents')).then(function(torrents) {
     var deferred = Q.defer();
     var downloadTorrents = function(data, index) {
       index = index || 0;
@@ -67,22 +91,21 @@ Downloader.prototype.start = function() {
           downloadTorrents(data, index + 1);
         } else {
           self.emit('downloadComplete', torrents[index].name);
-          self.emit('finished', torrents);
           deferred.resolve(torrents);
         }
       }, function(data) {
         self.emit('rsyncOutput', {name: torrents[index].name, output: data.toString()});
       }, function(data) {
-
+        self.emit('rsyncError', {name: torrents[index].name, output: data.toString()});
       });
     };
     downloadTorrents(torrents);
     return deferred.promise;
   }).then(function(torrents) {
     if (!config.get('transmission.deleteAfterCompleted')) {
-      return;
+      return false;
     }
-    return request(config.get('transmission.rpcUrl'), {
+    return apiRequest(config.get('transmission.rpcUrl'), {
       auth: auth,
       json: true,
       method: 'post',
@@ -97,8 +120,12 @@ Downloader.prototype.start = function() {
         }
       }
     });
-    
-  });
+  }, _.curry(errorHandler, 'downloadingTorrents')).then(function(removed) {
+    if (removed !== false) {
+      self.emit('torrentsRemoved');
+    }
+    self.emit('finished');
+  }, _.curry(errorHandler, 'removingTorrents'));
 };
 
 module.exports = Downloader;
