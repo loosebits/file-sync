@@ -29,7 +29,7 @@
                     return;
                 }
                 // Create a new instance of the websocket
-                webSocket = new WebSocket("ws://localhost:3000/");
+                webSocket = new WebSocket('ws://' + window.location.host + '/');
                 writeResponse('Connecting..');
                  
                 /**
