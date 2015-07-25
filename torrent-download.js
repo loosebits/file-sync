@@ -79,6 +79,9 @@ Downloader.prototype.start = function() {
     downloadTorrents(torrents);
     return deferred.promise;
   }).then(function(torrents) {
+    if (!config.get('transmission.deleteAfterCompleted')) {
+      return;
+    }
     return request(config.get('transmission.rpcUrl'), {
       auth: auth,
       json: true,

@@ -5,6 +5,7 @@ var expressWs = require('express-ws')(app);
 var Downloader = require('./torrent-download');
 var _ = require('lodash');
 var config = require('config');
+var notifer = require('./pushNotifier');
 
 app.use(express.static('public'));
 
@@ -30,6 +31,7 @@ app.ws('/', function(ws) {
     downloader.on('downloadComplete', function(torrent) {
       sendToClients(torrent + ' downloaded!');
     });
+    downloader.on('downloadComplete', notifer);
     downloader.on('rsyncOutput', function(data) {
       sendToClients(data.name + ' ' + data.output);
     });
