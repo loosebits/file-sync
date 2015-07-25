@@ -6,6 +6,8 @@ var config = require('config');
 var EventEmitter = require('events').EventEmitter;
 var denodeify = require('denodeify');
 
+require('es6-promise').polyfill();
+
 var authRequest = denodeify(require('request'), function(err, response, body) {
   if (err) {
     console.log('failed');
