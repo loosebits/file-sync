@@ -1,76 +1,43 @@
 <!DOCTYPE html>
- 
-<html>
-    <head>
-        <title>Torrend Download</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width">
-    </head>
-    <body>
-       
-        <div>
-            <button type="button" onclick="openSocket();" >Start Download</button>
-            <button type="button" onclick="closeSocket();" >Disconnect</button>
+<html lang="en" ng-app="app">
+  <head>
+    <title>Torrent Download</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="lib/angular-material/angular-material.css" />
+    <link rel="stylesheet" href="lib/font-awesome/css/font-awesome.css" />
+    <link rel="stylesheet" href="css/sytes.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
+    <meta name="viewport" content="initial-scale=1" />
+    <script src="lib/lodash/lodash.min.js"></script>
+    <script src="lib/angular/angular.min.js"></script>
+    <script src="lib/angular-animate/angular-animate.min.js"></script>
+    <script src="lib/angular-aria/angular-aria.min.js"></script>
+    <script src="lib/angular-material/angular-material.min.js"></script>
+    <script src="lib/ng-websocket/ng-websocket.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/torrentController.js"></script>
+  </head>
+  <body ng-app="app" ng-controller="torrentController">
+    <div layout="column">
+      <md-toolbar layout="row"  >
+        <div class="md-toolbar-tools">
+          <h2>Torrent Downloader</h2>
+          <span flex></span>
+          <md-button class="md-fab md-warn" aria-label="Start Download" layout="row" layout-align="end" ng-click="start()">
+            <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px" />
+          </md-button>
         </div>
-        <!-- Server responses get written here -->
-        <div id="messages"></div>
-       
-        <!-- Script to utilise the WebSocket -->
-        <script type="text/javascript">
-                       
-            var webSocket;
-            var messages = document.getElementById("messages");
-           
-           
-            function openSocket(){
-                // Ensures only one connection is open at a time
-                if(webSocket !== undefined && webSocket.readyState !== WebSocket.CLOSED){
-                   writeResponse("WebSocket is already opened.");
-                    return;
-                }
-                // Create a new instance of the websocket
-                webSocket = new WebSocket('ws://' + window.location.host + '/');
-                writeResponse('Connecting..');
-                 
-                /**
-                 * Binds functions to the listeners for the websocket.
-                 */
-                webSocket.onopen = function(event){
-                    // For reasons I can't determine, onopen gets called twice
-                    // and the first time event.data is undefined.
-                    // Leave a comment if you know the answer.
-                    if(event.data === undefined)
-                        return;
- 
-                    writeResponse(event.data);
-                };
- 
-                webSocket.onmessage = function(event){
-                    writeResponse(event.data);
-                };
- 
-                webSocket.onclose = function(event){
-                    writeResponse("Connection closed");
-                };
-            }
-           
-            /**
-             * Sends the value of the text input to the server
-             */
-            function send(){
-                var text = document.getElementById("messageinput").value;
-                webSocket.send(text);
-            }
-           
-            function closeSocket(){
-                webSocket.close();
-            }
- 
-            function writeResponse(text){
-                messages.innerHTML = "<br/>" + text;
-            }
-           
-        </script>
-       
-    </body>
+      </md-toolbar>
+      <md-content layout-padding>
+        <md-card ng-repeat="torrent in progress.torrents">
+          <md-card-content>
+            <h2>{{torrent.name}}</h2>
+            <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
+            <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
+            <md-progress-linear md-mode="determinate" ng-value="torrent.progress.percentComplete"></md-progress-linear>
+          </md-card-content>
+        </md-card>
+      </md-content>
+    </div>
+  </body>
 </html>

@@ -10,10 +10,8 @@ require('es6-promise').polyfill();
 
 var authRequest = denodeify(require('request'), function(err, response, body) {
   if (err) {
-    console.log('failed');
     return [err, response];
   } else if (response.statusCode !== 409 || !response.headers['x-transmission-session-id']) {
-    console.log('failed1');
     return [new Error('Authentication failed', response), response];
   } else {
     return [err, response.headers['x-transmission-session-id']];
@@ -21,15 +19,12 @@ var authRequest = denodeify(require('request'), function(err, response, body) {
 });
 var apiRequest = denodeify(require('request'), function(err, response, body) {
   if (err) {
-    console.log('failed3');
     return [err, response];
   }
   if (response.statusCode < 200 || response.statusCode > 399) {
-    console.log('failed4');
     return [new Error('Request failed with ' + response.statusCode, response), response];
   }
   if (body.result !== 'success') {
-    console.log('failed5');
     return [new Error('Request failed with a transmission error', response), response];
   }
   return [err, body.arguments];
@@ -39,13 +34,30 @@ var auth = {
   password: config.get('transmission.password')
 };
 var Downloader = function() {
+  Downloader.super_.call(this);
+  this.events_ = []; //Hold fired events
 };
 require('util').inherits(Downloader, EventEmitter);
 
+Downloader.prototype.events = function() {
+  return this.events_;
+};
+
+Downloader.prototype.emit = function(event, data) {
+  EventEmitter.prototype.emit.call(this, event, data);
+  this.events_.push({event: event, data: data}); //Record events that have fired
+};
+
 Downloader.prototype.start = function() {
   var self = this;
+  if ((_.last(self.events_) || {event: 'finished'}).event !== 'finished') {
+    return;
+  }
+  console.log("start");
+  self.events_ = [];
   var errorHandler = function(step, err) {
     self.emit('error', {step: step, error: err});
+    self.emit('finished');
   };
   self.emit('authenticating');
   authRequest(config.get('transmission.rpcUrl'), {
@@ -67,7 +79,7 @@ Downloader.prototype.start = function() {
         'x-transmission-session-id': self.session
       }
     });
-  }, _.curry(errorHandler, 'authenticating')).then(function(args) {
+  }, _.curry(errorHandler)('authenticating')).then(function(args) {
     var torrents = _.filter(args.torrents, function(t) {
       return t.isFinished;
     });
@@ -77,7 +89,7 @@ Downloader.prototype.start = function() {
     var deferred = Q.defer();
     var downloadTorrents = function(data, index) {
       index = index || 0;
-      self.emit('startingDownload', torrents[index].name);
+      self.emit('startingDownload', torrents[index]);
       new Rsync().flags('azvP')
       .source(config.get('ssh.user') + '@' + config.get('ssh.host') + ':' + config.get('ssh.path') + '/' + torrents[index].name.replace(/[^a-zA-Z0-9\\-\\._]+/g, '*'))
       .destination(config.get('destination'))
@@ -86,14 +98,22 @@ Downloader.prototype.start = function() {
           self.emit('error', {step: 'download', error: err});
           deferred.reject(err);
         } else if (index !== torrents.length - 1) {
-          self.emit('downloadComplete', torrents[index].name);
+          self.emit('downloadComplete', torrents[index]);
           downloadTorrents(data, index + 1);
         } else {
-          self.emit('downloadComplete', torrents[index].name);
+          self.emit('downloadComplete', torrents[index]);
           deferred.resolve(torrents);
         }
       }, function(data) {
-        self.emit('rsyncOutput', {name: torrents[index].name, output: data.toString()});
+        console.log(data.toString());
+        var m = /\d+\s+(\d+)%\s+(\d+\.?\d+[^\s]+)\s+(\d+:\d+:\d+)/.exec(data.toString());
+        if (m) {
+          self.emit('rsyncOutput', {torrent: torrents[index], progress: {
+            percentComplete: m[1],
+            transferSpeed: m[2],
+            timeRemaining: m[3]
+          }});  
+        }
       }, function(data) {
         self.emit('rsyncError', {name: torrents[index].name, output: data.toString()});
       });
@@ -123,12 +143,12 @@ Downloader.prototype.start = function() {
         }
       }
     });
-  }, _.curry(errorHandler, 'downloadingTorrents')).then(function(removed) {
+  }, _.curry(errorHandler)('downloadingTorrents')).then(function(removed) {
     if (removed !== false) {
       self.emit('torrentsRemoved');
     }
     self.emit('finished');
-  }, _.curry(errorHandler, 'removingTorrents'));
+  }, _.curry(errorHandler)('removingTorrents'));
 };
 
-module.exports = Downloader;
+module.exports = new Downloader();
