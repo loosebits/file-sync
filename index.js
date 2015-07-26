@@ -53,7 +53,10 @@ app.ws('/', function(ws) {
 var aWss = expressWs.getWss('/');
 var sendToClients = function(message) {
   aWss.clients.forEach(function (client) {
-    client.send(message);
+    try {
+      client.send(message);
+    } catch (ignore) { //Client lost connection
+    }
   });
 };
 

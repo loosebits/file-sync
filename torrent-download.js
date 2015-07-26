@@ -72,9 +72,6 @@ Downloader.prototype.start = function() {
       return t.isFinished;
     });
     self.emit('torrentsListed', torrents);
-    if (!torrents.length) {
-      self.emit('finished');
-    }
     return torrents;
   }, _.curry(errorHandler, 'listingTorrents')).then(function(torrents) {
     var deferred = Q.defer();
@@ -101,10 +98,14 @@ Downloader.prototype.start = function() {
         self.emit('rsyncError', {name: torrents[index].name, output: data.toString()});
       });
     };
-    downloadTorrents(torrents);
+    if (torrents.length) {
+      downloadTorrents(torrents);
+    } else {
+      deferred.resolve(torrents);
+    }
     return deferred.promise;
   }).then(function(torrents) {
-    if (!config.get('transmission.deleteAfterCompleted')) {
+    if (!config.get('transmission.deleteAfterCompleted') || !torrents.length) {
       return false;
     }
     return apiRequest(config.get('transmission.rpcUrl'), {
