@@ -45,6 +45,11 @@ Downloader.prototype.events = function() {
 
 Downloader.prototype.emit = function(event, data) {
   EventEmitter.prototype.emit.call(this, event, data);
+  if (event == 'rsyncOutput') {
+    _.remove(this.events_, function(e) {
+      return e.event == 'rsyncOutput' && e.data.torrent.id == data.torrent.id;
+    });
+  }
   this.events_.push({event: event, data: data}); //Record events that have fired
 };
 
