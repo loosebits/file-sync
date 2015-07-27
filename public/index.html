@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="lib/angular-material/angular-material.css" />
     <link rel="stylesheet" href="lib/font-awesome/css/font-awesome.css" />
-    <link rel="stylesheet" href="css/sytes.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
     <meta name="viewport" content="initial-scale=1" />
     <script src="lib/lodash/lodash.min.js"></script>
@@ -23,8 +22,8 @@
         <div class="md-toolbar-tools">
           <h2>Torrent Downloader</h2>
           <span flex></span>
-          <md-button class="md-fab md-warn" aria-label="Start Download" layout="row" layout-align="end" ng-click="start()">
-            <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px" />
+          <md-button class="md-raised md-warn" aria-label="Start Download" layout="row" layout-align="end" ng-click="start()">
+            <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
           </md-button>
         </div>
       </md-toolbar>
@@ -37,6 +36,9 @@
             <md-progress-linear md-mode="determinate" ng-value="torrent.progress.percentComplete"></md-progress-linear>
           </md-card-content>
         </md-card>
+        <p ng-show="progress.torrentsListed && !progress.torrents.length">No completed torrents found.  Press the <b>Download</b> button to check for completed torrents and start the download.</p>
+        <p ng-show="progress.started && !progress.torrentsListed">Checking for new torrents.</p>
+        <p ng-show="!progress.started">Press the <b>Download</b> button to check for completed torrents and start the download.</p>
       </md-content>
     </div>
   </body>

@@ -3,16 +3,27 @@
 angular.module('app').controller('torrentController', function($scope) {
   var ws = $scope.ws;
   var progress = $scope.progress = {
+    started: true,
     authenticated: false,
     torrentsListed: false,
     torrents: []
   };
+  ws.$emit('sync');
   $scope.start = function() {
     ws.$emit('start');
+    progress.started = true;
+    progress.authenticated = false;
+    progress.torrentsListed = false;
+    progress.torrents = [];
   };
   function torrentFinder(id, torrent) {
     return torrent.id === id;
   }
+  ws.$on('notStarted', function() {
+    $scope.$apply(function() {
+      progress.started = false;
+    });
+  });
   ws.$on('authenticated', function() {
     $scope.$apply(function() {
       progress.authenticated = true;

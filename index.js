@@ -32,7 +32,8 @@ app.ws('/', function(ws) {
       data = JSON.parse(data);
       if (data.event == 'start') {
         downloader.start(); //noop if running already
-        sendStatus(ws); //Catch up client on new events
+      } else if (data.event == 'sync') {
+        sendStatus(ws);
       }
     } catch (ignore) {
     }
@@ -41,9 +42,14 @@ app.ws('/', function(ws) {
 });
 
 var sendStatus = function(ws) {
-  _.each( _.compact(_.map(downloader.events(), function(e) {
+  var events = _.compact(_.map(downloader.events(), function(e) {
     return mapEvent(e.event, e.data);
-  })), function(e) {
+  }));
+  if (!events.length) {
+    ws.send(JSON.stringify({event: 'notStarted'}));
+  }
+  _.each(events, function(e) {
+    console.log("Sending event", e);
     ws.send(JSON.stringify(e));
   });
 };
