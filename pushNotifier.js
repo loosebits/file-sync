@@ -14,7 +14,7 @@ module.exports = function(torrent) {
     return;
   }
   _.each(config.get('pushOver.users'), function(user) {
-    p.send({message: torrent + ' download complete.',
+    p.send({message: torrent.name + ' download complete.',
       title: 'Download Complete',
       user: user
     });
