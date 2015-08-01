@@ -6,9 +6,11 @@ var _ = require('lodash');
 var config = require('config');
 var notifer = require('./pushNotifier');
 
-app.use(express.static('public'));
+app.use(require('express-promise'));
 
-var downloader = require('./torrent-download');
+var downloader = require('./download');
+var Transmission = require('./Transmission');
+var transmission = new Transmission();
 
 
 
@@ -26,6 +28,13 @@ var mapEvent = function(event, data) {
       return {event: 'error', data: data};
   }
 };
+
+app.get('/torrents', function(req, res) {
+  console.log('hee');
+  res.json(transmission.getTorrents());
+});
+app.use(express.static('public'));
+
 app.ws('/', function(ws) {
   ws.on('message',function(data) {
     try {
