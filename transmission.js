@@ -4,7 +4,6 @@ var config = require('config');
 var Q = require('q');
 var _ = require('lodash');
 var authRequest = denodeify(require('request'), function(err, response, body) {
-  console.log('here');
   if (err) {
     return [err, response];
   } else if (response.statusCode !== 409 || !response.headers['x-transmission-session-id']) {
@@ -30,7 +29,6 @@ var auth = {
   password: config.get('transmission.password')
 };
 function authenticate() {
-  console.log('fpo');
   return authRequest(config.get('transmission.rpcUrl'), {
     auth: auth
   }).then(function(session) {
@@ -43,7 +41,6 @@ var Transmission = function() {
 
 Transmission.prototype.getTorrents = function(all) {
   return authenticate().then(function(session) {
-    console.log('session', session);
     return apiRequest(config.get('transmission.rpcUrl'), {
       body: {
         method: 'torrent-get',
@@ -58,12 +55,12 @@ Transmission.prototype.getTorrents = function(all) {
         'x-transmission-session-id': session
       }
     });
-  }).then(function(torrents) {
-    console.log('torrents', torrents);
+  }).then(function(response) {
+    console.log(response.torrents);
     if (all) {
-      return torrents;
+      return response.torrents;
     } else {
-      return _.filter(torrents, function(t) {
+      return _.filter(response.torrents, function(t) {
         return t.isFinished;
       });
     }
@@ -93,4 +90,4 @@ Transmission.prototype.deleteTorrents = function(torrents) {
   });
 };
 
-module.exports = Transmission;
+module.exports = new Transmission();

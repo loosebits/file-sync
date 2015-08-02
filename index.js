@@ -1,25 +1,18 @@
 'use strict';
+require('es6-promise').polyfill();
 var express = require('express');
 var app = express();
 var expressWs = require('express-ws')(app);
 var _ = require('lodash');
 var config = require('config');
 var notifer = require('./pushNotifier');
-
-app.use(require('express-promise'));
-
 var downloader = require('./download');
-var Transmission = require('./Transmission');
-var transmission = new Transmission();
+var transmission = require('./transmission');
 
 
 
 var mapEvent = function(event, data) {
   switch (event) {
-    case 'authenticated':
-      return {event: 'authenticated'};
-    case 'torrentsListed':
-      return {event: 'torrentsListed', data: data};
     case 'downloadComplete':
       return {event: 'downloadComplete', data: data};
     case 'rsyncOutput':
@@ -28,40 +21,62 @@ var mapEvent = function(event, data) {
       return {event: 'error', data: data};
   }
 };
+var torrents = [];
 
 app.get('/torrents', function(req, res) {
-  console.log('hee');
-  res.json(transmission.getTorrents());
+  if (!torrents.length) {
+    transmission.getTorrents().then(function(_torrents) {
+      _.each(_torrents, function(t) {
+        if (!_.findWhere(torrents, t)) {
+          torrents.push(t);
+        }
+      });
+      res.json(torrents);
+    });
+  } else {
+    res.json(torrents);
+  }
 });
+
+app.get('/refresh', function(req, res) {
+  transmission.getTorrents().then(function(_torrents) {
+     _.each(_torrents, function(t) {
+       if (!_.findWhere(torrents, t)) {
+         torrents.push(t);
+       }
+     });
+     res.json(torrents);
+   });
+});
+
+app.get('/torrents/:id/download', function(req, res, next) {
+  var torrent = _.find(torrents, function(t) {
+    return t.id == req.params.id;
+  });
+  if (torrent) {
+    downloader.enqueue(torrent);
+    downloader.download();
+    res.json(torrent);
+  } else {
+    res.json({});
+  }
+});
+
+app.delete('/torrents/:id', function(req, res) {
+  var torrent = _.remove(torrents, function(t) {
+    return t.id == req.params.id && (t.status === 'downloaded' || t.status === 'downloadFailed');
+  });
+  if (torrent.status === 'downloadFailed' && config.get('transmission.deleteAfterCompleted')) {
+    transmission.deleteTorrents(torrent);
+  }
+  res.send(torrent);
+});
+
 app.use(express.static('public'));
 
 app.ws('/', function(ws) {
-  ws.on('message',function(data) {
-    try {
-      data = JSON.parse(data);
-      if (data.event == 'start') {
-        downloader.start(); //noop if running already
-      } else if (data.event == 'sync') {
-        sendStatus(ws);
-      }
-    } catch (ignore) {
-    }
-  });
-
 });
 
-var sendStatus = function(ws) {
-  var events = _.compact(_.map(downloader.events(), function(e) {
-    return mapEvent(e.event, e.data);
-  }));
-  if (!events.length) {
-    ws.send(JSON.stringify({event: 'notStarted'}));
-  }
-  _.each(events, function(e) {
-    console.log("Sending event", e);
-    ws.send(JSON.stringify(e));
-  });
-};
 var aWss = expressWs.getWss('/');
 var sendToClients = function(message) {
   aWss.clients.forEach(function (client) {
@@ -72,26 +87,17 @@ var sendToClients = function(message) {
   });
 };
 
-downloader.on('authenticating', function() {
-});
-downloader.on('authenticated', function() {
-  sendToClients(mapEvent('authenticated'));
-});
-downloader.on('torrentsListed', function(torrents) {
-  sendToClients(mapEvent('torrentsListed', torrents));
-});
 downloader.on('startingDownload', function(torrent) {
 });
 downloader.on('downloadComplete', function(torrent) {
+  if (config.get('transmission.deleteAfterCompleted')) {
+    transmission.deleteTorrents(torrent);
+  }
   sendToClients(mapEvent('downloadComplete', torrent));
 });
 downloader.on('downloadComplete', notifer);
 downloader.on('rsyncOutput', function(data) {
   sendToClients(mapEvent('rsyncOutput', data));
-});
-downloader.on('torrentsRemoved', function(data) {
-});
-downloader.on('finished', function(torrents) {
 });
 downloader.on('error', function(error) {
   sendToClients(mapEvent('error', error));
