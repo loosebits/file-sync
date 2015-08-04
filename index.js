@@ -24,24 +24,9 @@ var mapEvent = function(event, data) {
 var torrents = [];
 
 app.get('/torrents', function(req, res) {
-  if (!torrents.length) {
-    transmission.getTorrents().then(function(_torrents) {
-      _.each(_torrents, function(t) {
-        if (!_.findWhere(torrents, t)) {
-          torrents.push(t);
-        }
-      });
-      res.json(torrents);
-    });
-  } else {
-    res.json(torrents);
-  }
-});
-
-app.get('/refresh', function(req, res) {
   transmission.getTorrents().then(function(_torrents) {
      _.each(_torrents, function(t) {
-       if (!_.findWhere(torrents, t)) {
+       if (!_.findWhere(torrents, {id: t.id})) {
          torrents.push(t);
        }
      });
@@ -49,7 +34,7 @@ app.get('/refresh', function(req, res) {
    });
 });
 
-app.get('/torrents/:id/download', function(req, res, next) {
+app.get('/torrents/:id/enqueue', function(req, res, next) {
   var torrent = _.find(torrents, function(t) {
     return t.id == req.params.id;
   });
@@ -63,10 +48,10 @@ app.get('/torrents/:id/download', function(req, res, next) {
 });
 
 app.delete('/torrents/:id', function(req, res) {
-  var torrent = _.remove(torrents, function(t) {
+  var torrent = _.first(_.remove(torrents, function(t) {
     return t.id == req.params.id && (t.status === 'downloaded' || t.status === 'downloadFailed');
-  });
-  if (torrent.status === 'downloadFailed' && config.get('transmission.deleteAfterCompleted')) {
+  }));
+  if (torrent && torrent.status === 'downloadFailed' && config.get('transmission.deleteAfterCompleted')) {
     transmission.deleteTorrents(torrent);
   }
   res.send(torrent);

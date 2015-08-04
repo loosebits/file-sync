@@ -12,7 +12,10 @@
     <script src="lib/angular-animate/angular-animate.min.js"></script>
     <script src="lib/angular-aria/angular-aria.min.js"></script>
     <script src="lib/angular-material/angular-material.min.js"></script>
+    <script src="lib/angular-resource/angular-resource.min.js"></script>
     <script src="lib/ng-websocket/ng-websocket.js"></script>
+    <script src="lib/humanize/humanize.js"></script>
+    <script src="lib/angularjs-humanize/src/angular-humanize.js"></script>
     <script src="js/app.js"></script>
     <script src="js/torrentController.js"></script>
   </head>
@@ -22,23 +25,39 @@
         <div class="md-toolbar-tools">
           <h2>Torrent Downloader</h2>
           <span flex></span>
-          <md-button class="md-raised md-warn" aria-label="Start Download" layout="row" layout-align="end" ng-click="start()">
+          <div layout="row" layout-align="end">
+          <md-button class="md-raised" aria-label="Refresh"  ng-click="refresh()" title='Refresh'>
+            <md-icon md-font-icon="fa-refresh" class="fa md-primary md-hue-2" style="font-size:24px"/>
+          </md-button>
+          <md-button class="md-raised md-warn" aria-label="Download all" ng-disabled="!downloadableTorrents()"  ng-click="downloadAll()" title='Download all'>
             <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
           </md-button>
+          </div>
         </div>
       </md-toolbar>
       <md-content layout-padding>
-        <md-card ng-repeat="torrent in progress.torrents">
+        <md-card ng-repeat="torrent in torrents">
           <md-card-content>
             <h2>{{torrent.name}}</h2>
-            <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
-            <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
-            <md-progress-linear md-mode="determinate" ng-value="torrent.progress.percentComplete"></md-progress-linear>
+            <p>Size: {{torrent.totalSize | humanizeFilesize}}
+            <div ng-show="torrent.status">
+              <p>Status: {{torrent.status}}<p>
+              <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
+              <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
+              <md-progress-linear md-mode="determinate" ng-value="torrent.progress.percentComplete"></md-progress-linear>
+            </div>
           </md-card-content>
+          <div class="md-actions" layout="row" layout-align="end center">
+            <md-button ng-disabled="torrent.status == 'queued' || torrent.status == 'downloading'" title="Download"
+              ng-click='torrent.$enqueue()' >
+              <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
+            </md-button>
+            <md-button ng-disabled="torrent.status != 'downloaded'" ng-click='delete(torrent)' title="Remove">
+              <md-icon md-font-icon="fa-trash-o"  class="fa md-hue-2" style="font-size:24px" ng-click='delete(torrent)'/>
+            </md-button>
+          </div>
         </md-card>
-        <p ng-show="progress.torrentsListed && !progress.torrents.length">No completed torrents found.  Press the <b>Download</b> button to check for completed torrents and start the download.</p>
-        <p ng-show="progress.started && !progress.torrentsListed">Checking for new torrents.</p>
-        <p ng-show="!progress.started">Press the <b>Download</b> button to check for completed torrents and start the download.</p>
+        <p ng-show="!torrents.length && torrents.$resolved">No completed torrents found.  Press the <b>Refresh</b> button to check for completed torrents.</p> 
       </md-content>
     </div>
   </body>

@@ -1,7 +1,6 @@
 'use strict';
 var denodeify = require('denodeify');
 var config = require('config');
-var Q = require('q');
 var _ = require('lodash');
 var authRequest = denodeify(require('request'), function(err, response, body) {
   if (err) {
@@ -45,7 +44,7 @@ Transmission.prototype.getTorrents = function(all) {
       body: {
         method: 'torrent-get',
         arguments: {
-          fields: ['id', 'name', 'isFinished']
+          fields: ['id', 'name', 'isFinished', 'totalSize']
         }
       },
       auth: auth,
@@ -56,7 +55,6 @@ Transmission.prototype.getTorrents = function(all) {
       }
     });
   }).then(function(response) {
-    console.log(response.torrents);
     if (all) {
       return response.torrents;
     } else {
@@ -71,7 +69,9 @@ Transmission.prototype.deleteTorrents = function(torrents) {
   if (!_.isArray(torrents)) {
     torrents = [torrents];
   }
-  return authenticate.then(function(session) {
+  console.log(_.map(torrents, function(t) { return t.id; }));
+  return authenticate().then(function(session) {
+    console.log('session', session);
     apiRequest(config.get('transmission.rpcUrl'), {
       auth: auth,
       json: true,
