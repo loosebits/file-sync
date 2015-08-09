@@ -52,7 +52,7 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
 
   $scope.removeAll = function() {
     _($scope.torrents).filter(removableTorrent).each(function(t) {
-      t.$delete();
+      $scope.delete(t);
     }).value();
     $scope.menuState = 'closed';
   };
