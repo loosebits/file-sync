@@ -26,11 +26,14 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
         }
       });
     });
+    $scope.menuState = 'closed';
   };
 
   function downloadableTorrent(t) {
     return !t.status || t.status === 'downloadFailed';
   }
+
+  $scope.downloadableTorrent = downloadableTorrent;
 
   $scope.downloadAll = function() {
     $scope.torrents.$promise.then(function(torrents) {
@@ -38,6 +41,20 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
         t.$enqueue();
       }).value();
     });
+    $scope.menuState = 'closed';
+  };
+
+  function removableTorrent(t) {
+    return t.status === 'downloaded' || t.status === 'downloadFailed';
+  }
+
+  $scope.removableTorrent = removableTorrent;
+
+  $scope.removeAll = function() {
+    _($scope.torrents).filter(removableTorrent).each(function(t) {
+      t.$delete();
+    }).value();
+    $scope.menuState = 'closed';
   };
 
   $scope.downloadableTorrents = function() {
@@ -56,6 +73,7 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
       if (!torrent) {
         return;
       }
+      torrent = _.extend(torrent, data.torrent);
       torrent.progress = data.progress;
     });
   });

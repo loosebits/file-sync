@@ -4,9 +4,11 @@
     <title>Torrent Download</title>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="lib/angular-material/angular-material.css" />
-    <link rel="stylesheet" href="lib/font-awesome/css/font-awesome.css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
+    <link href="lib/ng-mfb/mfb/dist/mfb.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic" />
+    <link rel="stylesheet" href="http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" />
     <meta name="viewport" content="initial-scale=1" />
+    <script src="lib/ng-mfb/mfb/dist/lib/modernizr.touch.js"></script>
     <script src="lib/lodash/lodash.min.js"></script>
     <script src="lib/angular/angular.min.js"></script>
     <script src="lib/angular-animate/angular-animate.min.js"></script>
@@ -14,51 +16,54 @@
     <script src="lib/angular-material/angular-material.min.js"></script>
     <script src="lib/angular-resource/angular-resource.min.js"></script>
     <script src="lib/ng-websocket/ng-websocket.js"></script>
+    <script src="lib/ng-mfb/src/mfb-directive.js"></script>
     <script src="lib/humanize/humanize.js"></script>
     <script src="lib/angularjs-humanize/src/angular-humanize.js"></script>
     <script src="js/app.js"></script>
     <script src="js/torrentController.js"></script>
   </head>
-  <body ng-app="app" ng-controller="torrentController">
-    <div layout="column">
-      <md-toolbar layout="row"  >
+  <body ng-app="app" ng-controller="torrentController" layout="row">
+    <div layout="column" role="main" flex="grow">
+      <md-toolbar layout="row"  class="md-whiteframe-z1">
         <div class="md-toolbar-tools">
           <h2>Torrent Downloader</h2>
-          <span flex></span>
-          <div layout="row" layout-align="end">
-          <md-button class="md-raised" aria-label="Refresh"  ng-click="refresh()" title='Refresh'>
-            <md-icon md-font-icon="fa-refresh" class="fa md-primary md-hue-2" style="font-size:24px"/>
-          </md-button>
-          <md-button class="md-raised md-warn" aria-label="Download all" ng-disabled="!downloadableTorrents()"  ng-click="downloadAll()" title='Download all'>
-            <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
-          </md-button>
-          </div>
         </div>
       </md-toolbar>
-      <md-content layout-padding>
+      <md-content layout-padding md-scroll-y flex>
+        <nav mfb-menu position="tr" effect="slidein" 
+          active-icon="ion-android-close" resting-icon="ion-android-add"
+          toggling-method="click" ng-mouseleave="menuState='closed'" menu-state="menuState">
+          <button mfb-button icon="ion-android-refresh" label="Refresh" ng-click="refresh()"></button>
+          <button mfb-button icon="ion-android-download" label="Download all" ng-click="downloadAll()"></button>
+          <button mfb-button icon="ion-android-delete" label="Remove downloaded" ng-click="removeAll()"></button>
+        </nav>
         <md-card ng-repeat="torrent in torrents">
           <md-card-content>
             <h2>{{torrent.name}}</h2>
             <p>Size: {{torrent.totalSize | humanizeFilesize}}
-            <div ng-show="torrent.status">
-              <p>Status: {{torrent.status}}<p>
+            <p ng-show="torrent.status">Status: {{torrent.status}}<p>
+            <div ng-show="torrent.status == 'downloading'">
               <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
               <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
-              <md-progress-linear md-mode="determinate" ng-value="torrent.progress.percentComplete"></md-progress-linear>
             </div>
+            <md-progress-linear ng-show="torrent.status && torrent.status != 'queued'"md-mode="determinate" 
+              ng-value="torrent.progress.percentComplete" />
           </md-card-content>
           <div class="md-actions" layout="row" layout-align="end center">
-            <md-button ng-disabled="torrent.status == 'queued' || torrent.status == 'downloading'" title="Download"
+            <md-button ng-disabled="!downloadableTorrent(torrent)" title="Download" aria-label="Download"
               ng-click='torrent.$enqueue()' >
-              <md-icon md-font-icon="fa-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
+              <md-icon md-font-icon="ion-android-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
             </md-button>
-            <md-button ng-disabled="torrent.status != 'downloaded'" ng-click='delete(torrent)' title="Remove">
-              <md-icon md-font-icon="fa-trash-o"  class="fa md-hue-2" style="font-size:24px" ng-click='delete(torrent)'/>
+            <md-button ng-disabled="!removableTorrent(torrent)" aria-label="Remove"
+              ng-click='delete(torrent)' title="Remove">
+              <md-icon md-font-icon="ion-android-delete"  class="fa md-hue-2" style="font-size:24px" ng-click='delete(torrent)'/>
             </md-button>
           </div>
         </md-card>
         <p ng-show="!torrents.length && torrents.$resolved">No completed torrents found.  Press the <b>Refresh</b> button to check for completed torrents.</p> 
+        
       </md-content>
+      
     </div>
   </body>
 </html>
