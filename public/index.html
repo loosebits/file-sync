@@ -28,15 +28,15 @@
         <div class="md-toolbar-tools">
           <h2>Torrent Downloader</h2>
         </div>
-      </md-toolbar>
-      <md-content layout-padding md-scroll-y flex>
-        <nav mfb-menu position="tr" effect="slidein" 
+        <nav mfb-menu position="tr" effect="slidein"
           active-icon="ion-android-close" resting-icon="ion-android-add"
           toggling-method="click" ng-mouseleave="menuState='closed'" menu-state="menuState">
           <button mfb-button icon="ion-android-refresh" label="Refresh" ng-click="refresh()"></button>
           <button mfb-button icon="ion-android-download" label="Download all" ng-click="downloadAll()"></button>
           <button mfb-button icon="ion-android-delete" label="Remove downloaded" ng-click="removeAll()"></button>
         </nav>
+      </md-toolbar>
+      <md-content layout-padding md-scroll-y flex>
         <md-card ng-repeat="torrent in torrents">
           <md-card-content>
             <h2>{{torrent.name}}</h2>
@@ -46,7 +46,7 @@
               <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
               <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
             </div>
-            <md-progress-linear ng-show="torrent.status && torrent.status != 'queued'"md-mode="determinate" 
+            <md-progress-linear ng-show="torrent.status && torrent.status != 'queued'"md-mode="determinate"
               ng-value="torrent.progress.percentComplete" />
           </md-card-content>
           <div class="md-actions" layout="row" layout-align="end center">
@@ -60,10 +60,10 @@
             </md-button>
           </div>
         </md-card>
-        <p ng-show="!torrents.length && torrents.$resolved">No completed torrents found.  Press the <b>Refresh</b> button to check for completed torrents.</p> 
-        
+        <p ng-show="!torrents.length && torrents.$resolved">No completed torrents found.  Press the <b>Refresh</b> button to check for completed torrents.</p>
+
       </md-content>
-      
+
     </div>
   </body>
 </html>
