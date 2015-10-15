@@ -17,8 +17,10 @@
   "dependencies": {
     "angular-material": "~0.10.0",
     "ng-websocket": "~0.2.1",
-    "font-awesome": "~4.3.0",
-    "lodash": "~3.10.0"
+    "lodash": "~3.10.0",
+    "angular-resource": "~1.4.3",
+    "angularjs-humanize": "~0.0.1",
+    "ng-mfb": "~0.6.1"
   },
   "resolutions": {
     "angular": "1.4.3"

@@ -1,55 +1,88 @@
 (function() {
 'use strict';
-angular.module('app').controller('torrentController', function($scope) {
+angular.module('app').controller('torrentController', function($scope, Torrents) {
   var ws = $scope.ws;
-  var progress = $scope.progress = {
-    started: true,
-    authenticated: false,
-    torrentsListed: false,
-    torrents: []
+
+  var handler = function(torrents) {
+    _.each(torrents, function(t) {
+      if (t.status === 'downloaded') {
+        t.progress = t.progress || {};
+        t.progress.percentComplete = 100;
+      }
+    });
   };
-  ws.$emit('sync');
-  $scope.start = function() {
-    ws.$emit('start');
-    progress.started = true;
-    progress.authenticated = false;
-    progress.torrentsListed = false;
-    progress.torrents = [];
+
+  $scope.torrents = Torrents.query(handler);
+
+  $scope.refresh = function() {
+    Torrents.query(function(torrents) {
+      handler(torrents);
+      _.each(torrents, function(t) {
+        var torrent = _.findWhere($scope.torrents, {id: t.id});
+        if (torrent) {
+          _.extend(torrent, t);
+        } else {
+          $scope.torrents.push(t);
+        }
+      });
+    });
+    $scope.menuState = 'closed';
   };
-  function torrentFinder(id, torrent) {
-    return torrent.id === id;
+
+  function downloadableTorrent(t) {
+    return !t.status || t.status === 'downloadFailed';
   }
-  ws.$on('notStarted', function() {
-    $scope.$apply(function() {
-      progress.started = false;
+
+  $scope.downloadableTorrent = downloadableTorrent;
+
+  $scope.downloadAll = function() {
+    $scope.torrents.$promise.then(function(torrents) {
+      _(torrents).filter(downloadableTorrent).each(function(t) {
+        t.$enqueue();
+      }).value();
     });
-  });
-  ws.$on('authenticated', function() {
-    $scope.$apply(function() {
-      progress.authenticated = true;
+    $scope.menuState = 'closed';
+  };
+
+  function removableTorrent(t) {
+    return t.status === 'downloaded' || t.status === 'downloadFailed';
+  }
+
+  $scope.removableTorrent = removableTorrent;
+
+  $scope.removeAll = function() {
+    _($scope.torrents).filter(removableTorrent).each(function(t) {
+      $scope.delete(t);
+    }).value();
+    $scope.menuState = 'closed';
+  };
+
+  $scope.downloadableTorrents = function() {
+    return _.find($scope.torrents, downloadableTorrent);
+  };
+
+  $scope.delete = function(torrent) {
+    torrent.$delete(function() {
+      _($scope.torrents).remove({id: torrent.id}).value();
     });
-  });
-  ws.$on('torrentsListed', function(result) {
-    $scope.$apply(function() {
-      progress.torrentsListed = true;
-      progress.torrents = result;
-    });
-  });
+  };
+
   ws.$on('downloadingTorrent', function(data) {
     $scope.$apply(function() {
-      var torrent = _.find(progress.torrents, _.curry(torrentFinder)(data.torrent.id));
+      var torrent = _.find($scope.torrents,{id: data.torrent.id});
       if (!torrent) {
         return;
       }
+      torrent = _.extend(torrent, data.torrent);
       torrent.progress = data.progress;
     });
   });
+
   ws.$on('downloadComplete', function(torrent) {
-    console.log(torrent);
     $scope.$apply(function() {
-      var t = _.find(progress.torrents, _.curry(torrentFinder)(torrent.id));
+      var t = _.find($scope.torrents, {id: torrent.id});
       t.progress = t.progress || {};
-      t.progress.complete = true;
+      t.status = 'downloaded';
       t.progress.percentComplete = 100;
     });
   });
