@@ -23,15 +23,27 @@ var mapEvent = function(event, data) {
 };
 var torrents = [];
 
+function findNewTorrents(existingTorrents) {
+  return new Promise(function(resolve, reject) {
+    var newTorrents = [];
+    transmission.getTorrents().then(function(_torrents) {
+      _.each(_torrents, function(t) {
+         if (!_.findWhere(existingTorrents, {id: t.id})) {
+           newTorrents.push(t);
+         }
+       });
+      resolve(newTorrents);
+    }, function(err) {
+      reject(err);
+    });
+  });
+}
+
 app.get('/torrents', function(req, res) {
-  transmission.getTorrents().then(function(_torrents) {
-     _.each(_torrents, function(t) {
-       if (!_.findWhere(torrents, {id: t.id})) {
-         torrents.push(t);
-       }
-     });
-     res.json(torrents);
-   });
+  findNewTorrents(torrents).then(function(newTorrents) {
+    torrents.concat(newTorrents);
+    res.json(torrents);
+  });
 });
 
 app.get('/torrents/:id/enqueue', function(req, res, next) {
@@ -87,6 +99,25 @@ downloader.on('rsyncOutput', function(data) {
 downloader.on('error', function(error) {
   sendToClients(mapEvent('error', error));
 });
+
+if (config.has('cron')) {
+  try {
+    var CronJob = new require('cron').CronJob;
+    new CronJob(config.get('cron'), function() {
+      findNewTorrents().then(function(torrents) {
+        _.each(torrents, function(t) {
+          downloader.enqueue(t);
+          downloader.download();
+        });
+      }, function(err) {
+        console.log(err);
+      });
+    }, null, true);
+  } catch (e) {
+    console.log("Invalid cron expression", e);
+    process.exit(1);
+  }
+}
 
 
 app.listen(config.get('serverPort'), function(err) {

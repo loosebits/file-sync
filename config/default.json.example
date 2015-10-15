@@ -15,5 +15,6 @@
     "apiKey": "lsklskdlskd",
     "users": ["lsklkslfskf"]
   }
-  "serverPort": 8080
+  "serverPort": 8080,
+  "cron": "0 0 */2 * *" //Remove to disable
 }
