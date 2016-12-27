@@ -27,11 +27,9 @@ Downloader.prototype.enqueue = function(torrent) {
     this.queue.push(torrent);
   }
 };
-
 Downloader.prototype.queue = function() {
   return _.clone(this.queue);
 };
-
 Downloader.prototype.download = function() {
   var self = this;
   if (self.running) {
@@ -51,7 +49,7 @@ Downloader.prototype.download = function() {
     self.rsyncPid = new Rsync().flags('azvP')
     .source(config.get('ssh.user') + '@' + config.get('ssh.host') + ':' + config.get('ssh.path') +
       '/' + torrent.name.replace(/[^a-zA-Z0-9\\-\\._]+/g, '*'))
-    .destination(config.get('destination'))
+    .destination(config.get("destinations." + torrent.destination).path)
     .execute(function(err, code, cmd) {
       if (err) {
         torrent.status = 'downloadFailed';

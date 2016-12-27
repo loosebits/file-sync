@@ -9,6 +9,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "body-parser": "^1.15.2",
     "config": "^1.14.0",
     "denodeify": "^1.2.1",
     "es6-promise": "^2.3.0",

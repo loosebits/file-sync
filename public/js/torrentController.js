@@ -1,6 +1,6 @@
 (function() {
 'use strict';
-angular.module('app').controller('torrentController', function($scope, Torrents) {
+angular.module('app').controller('torrentController', function($scope, Torrents, Destinations) {
   var ws = $scope.ws;
 
   var handler = function(torrents) {
@@ -12,7 +12,14 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
     });
   };
 
-  $scope.torrents = Torrents.query(handler);
+  Destinations.query({}, function(destinations) {
+    $scope.destinations = _.filter(Object.keys(destinations), function(destination) {
+      return destination.indexOf('$') !== 0;
+    });
+  }).$promise.then(function() {
+    $scope.torrents = Torrents.query(handler);
+  });
+
 
   $scope.refresh = function() {
     Torrents.query(function(torrents) {
@@ -38,7 +45,7 @@ angular.module('app').controller('torrentController', function($scope, Torrents)
   $scope.downloadAll = function() {
     $scope.torrents.$promise.then(function(torrents) {
       _(torrents).filter(downloadableTorrent).each(function(t) {
-        t.$enqueue();
+        t.$save();
       }).value();
     });
     $scope.menuState = 'closed';

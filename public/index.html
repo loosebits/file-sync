@@ -41,17 +41,26 @@
           <md-card-content>
             <h2>{{torrent.name}}</h2>
             <p>Size: {{torrent.totalSize | humanizeFilesize}}
+            <md-input-container ng-show="torrent.status != 'downloading' && torrent.status != 'downloaded'">
+              <md-select ng-model="torrent.destination">
+                <md-option ng-value="destination" ng-repeat="destination in destinations">{{destination}}</md-option>
+              </md-select>
+            </md-input-container>
+            <p ng-show="torrent.status == 'downloading' || torrent.status == 'downloaded'">
+              Destination: {{torrent.destination}}
+            </p>
+            <p>
             <p ng-show="torrent.status">Status: {{torrent.status}}<p>
             <div ng-show="torrent.status == 'downloading'">
               <p>Transfer speed: {{torrent.progress.transferSpeed}}</p>
               <p>Time Remaining {{torrent.progress.timeRemaining}}</p>
             </div>
-            <md-progress-linear ng-show="torrent.status && torrent.status != 'queued'"md-mode="determinate"
+            <md-progress-linear ng-show="torrent.status && torrent.status != 'queued'" md-mode="determinate"
               ng-value="torrent.progress.percentComplete" />
           </md-card-content>
           <div class="md-actions" layout="row" layout-align="end center">
             <md-button ng-disabled="!downloadableTorrent(torrent)" title="Download" aria-label="Download"
-              ng-click='torrent.$enqueue()' >
+              ng-click='torrent.$save()' >
               <md-icon md-font-icon="ion-android-download" class="fa md-primary md-hue-2" style="font-size:24px"/>
             </md-button>
             <md-button ng-disabled="!removableTorrent(torrent)" aria-label="Remove"

@@ -8,6 +8,7 @@ var config = require('config');
 var notifer = require('./pushNotifier');
 var downloader = require('./download');
 var transmission = require('./transmission');
+var bodyParser = require('body-parser');
 
 
 
@@ -23,22 +24,32 @@ var mapEvent = function(event, data) {
 };
 var torrents = [];
 
+app.use(bodyParser.json());
+
+app.get('/destinations', function(req, res) {
+  res.json(config.get('destinations'));
+})
+
 app.get('/torrents', function(req, res) {
   transmission.getTorrents().then(function(_torrents) {
      _.each(_torrents, function(t) {
        if (!_.findWhere(torrents, {id: t.id})) {
-         torrents.push(t);
+          t.destination = _.find(Object.keys(config.get("destinations")), function(destinationName) {
+            return config.get('destinations')[destinationName].default;
+          });
+          torrents.push(t);
        }
      });
      res.json(torrents);
    });
 });
 
-app.get('/torrents/:id/enqueue', function(req, res, next) {
+app.put('/torrents/:id', function(req, res, next) {
   var torrent = _.find(torrents, function(t) {
     return t.id == req.params.id;
   });
   if (torrent) {
+    torrent.destination = req.body.destination;
     downloader.enqueue(torrent);
     downloader.download();
     res.json(torrent);

@@ -10,7 +10,12 @@ app.run(function($rootScope, $websocket, $location) {
 })
 .factory('Torrents',function($resource) {
   return $resource('torrents/:id', {id: '@id'}, {
-    enqueue: { url: 'torrents/:id/enqueue', params: {id: '@id'}, method: 'get' },
+    save: { url: 'torrents/:id', params: {id: '@id'}, method: 'put' },
   });
+})
+.factory('Destinations', function($resource) {
+	return $resource('destinations', {}, {
+		query: {isArray: false}
+	});
 });
 })();

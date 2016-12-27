@@ -10,7 +10,10 @@
     "password": "password",
     "deleteAfterCompleted": true
   },
-  "destination": "/Movies/",
+  "destinations": [
+    "Movies": {"default": true, "path": "/Movies/"},
+    "TV": {"path": "/TV/"}
+  ],
   "pushOver": { //Optional
     "apiKey": "lsklskdlskd",
     "users": ["lsklkslfskf"]
